@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Armatelo — Backend en microservicios
 
 Backend de la tienda **Armatelo** (componentes de PC) para el frontend React `arm-telo-app-main`.
