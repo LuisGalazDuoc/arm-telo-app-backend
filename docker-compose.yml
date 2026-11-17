@@ -1,0 +1,100 @@
+# Levanta todo el backend de Armatelo:  docker compose up -d --build
+# El frontend solo usa el API Gateway: http://localhost:9090/api/v1
+
+x-entorno-comun: &entorno-comun
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_USER: root
+  DB_PASSWORD: root
+  # Clave compartida para firmar/validar el JWT (mínimo 32 caracteres)
+  JWT_SECRET: ${JWT_SECRET:-armatelo-clave-secreta-de-desarrollo-cambiar-en-produccion-2026}
+  # Clave para las llamadas internas entre microservicios (/internal/**)
+  CLAVE_INTERNA: ${CLAVE_INTERNA:-armatelo-clave-interna-dev}
+
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: armatelo-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: America/Santiago
+    ports:
+      - "3306:3306"
+    volumes:
+      - armatelo-datos:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  auth-service:
+    build: ./auth-service
+    container_name: armatelo-auth
+    environment:
+      <<: *entorno-comun
+    ports:
+      - "9091:9091"   # expuesto solo para ver su Swagger
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  catalogo-service:
+    build: ./catalogo-service
+    container_name: armatelo-catalogo
+    environment:
+      <<: *entorno-comun
+    ports:
+      - "9092:9092"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  orden-service:
+    build: ./orden-service
+    container_name: armatelo-ordenes
+    environment:
+      <<: *entorno-comun
+      CATALOGO_URL: http://catalogo-service:9092
+      AUTH_URL: http://auth-service:9091
+    ports:
+      - "9093:9093"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      catalogo-service:
+        condition: service_started
+      auth-service:
+        condition: service_started
+
+  contacto-service:
+    build: ./contacto-service
+    container_name: armatelo-contacto
+    environment:
+      <<: *entorno-comun
+    ports:
+      - "9094:9094"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: armatelo-gateway
+    environment:
+      AUTH_URL: http://auth-service:9091
+      CATALOGO_URL: http://catalogo-service:9092
+      ORDEN_URL: http://orden-service:9093
+      CONTACTO_URL: http://contacto-service:9094
+      CORS_ORIGENES: http://localhost:5173,http://localhost:4173
+    ports:
+      - "9090:9090"
+    depends_on:
+      - auth-service
+      - catalogo-service
+      - orden-service
+      - contacto-service
+
+volumes:
+  armatelo-datos:
