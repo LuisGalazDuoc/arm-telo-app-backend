@@ -327,6 +327,3 @@ api.interceptors.request.use((config) => {
 | Formulario de contacto | `api.post('/mensajes', datos)` |
 
 Los nombres de los campos JSON son los mismos del frontend (`nombre`, `precioOferta`, `stockCritico`, `categoriaId`, `cliente`, `direccion`, `items`, `estado`…). Roles, estados y entrega van en minúsculas (`admin`, `pagada`, `despacho`). Un campo vacío (`''`) de `precioOferta` o `stock` se envía como `null`.
-=======
-# arm-telo-app-backend
->>>>>>> 20020f1d249550f97d2f712f82b7ada9f264912e
